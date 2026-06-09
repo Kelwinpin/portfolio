@@ -7,7 +7,7 @@ import images from "@/config/image.json";
 const [portrait] = images;
 
 const stats = [
-  { value: "4+", label: "Years of experience" },
+  { value: "5+", label: "Years of experience" },
   { value: "3", label: "Companies" },
   { value: "10+", label: "Products shipped" },
   { value: "2", label: "Cloud platforms" },

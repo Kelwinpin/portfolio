@@ -92,7 +92,7 @@ export default function About() {
               <div>
                 <div className="space-y-4 text-gray-400 leading-relaxed">
                   <p>
-                    I&apos;m a full-stack Software Engineer with 4+ years of
+                    I&apos;m a full-stack Software Engineer with 5+ years of
                     experience building scalable systems, intelligent
                     applications, and robust architectures. Currently working at{" "}
                     <span className="text-violet-300 font-medium">Cogna</span>{" "}

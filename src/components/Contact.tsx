@@ -35,14 +35,80 @@ const contactLinks = [
   },
 ];
 
-export default function Contact() {
-  const [form, setForm] = useState({ name: "", email: "", message: "" });
-  const [sent, setSent] = useState(false);
+interface FormState {
+  name: string;
+  email: string;
+  phone: string;
+  message: string;
+}
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSent(true);
+type FormErrors = Partial<Record<keyof FormState, string>>;
+
+function validate(form: FormState): FormErrors {
+  const errors: FormErrors = {};
+  if (!form.name.trim()) errors.name = "Name is required.";
+  if (!form.email.trim()) errors.email = "Email is required.";
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = "Enter a valid email.";
+  if (!form.message.trim()) errors.message = "Message is required.";
+  return errors;
+}
+
+export default function Contact() {
+  const [form, setForm] = useState<FormState>({
+    name: "",
+    email: "",
+    phone: "",
+    message: "",
+  });
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [touched, setTouched] = useState<Partial<Record<keyof FormState, boolean>>>({});
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+
+  function set(field: keyof FormState) {
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+      const value = e.target.value;
+      setForm((prev) => {
+        const next = { ...prev, [field]: value };
+        if (touched[field]) {
+          const errs = validate(next);
+          setErrors((prev) => ({ ...prev, [field]: errs[field] }));
+        }
+        return next;
+      });
+    };
   }
+
+  function blur(field: keyof FormState) {
+    return () => {
+      setTouched((prev) => ({ ...prev, [field]: true }));
+      const errs = validate(form);
+      setErrors((prev) => ({ ...prev, [field]: errs[field] }));
+    };
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const allTouched = { name: true, email: true, message: true };
+    setTouched(allTouched);
+    const errs = validate(form);
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+    setStatus("loading");
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error();
+      setStatus("success");
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  const inputClass =
+    "w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-violet-600 transition-colors";
 
   return (
     <section id="contact" className="py-24 bg-gray-900">
@@ -61,7 +127,6 @@ export default function Contact() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-12">
-
           <div>
             <h3 className="text-white font-semibold text-lg mb-6">
               Get in touch directly
@@ -100,70 +165,70 @@ export default function Contact() {
             </div>
           </div>
 
-
           <div>
-            {sent ? (
+            {status === "success" ? (
               <div className="h-full flex items-center justify-center py-12 bg-gray-800 rounded-2xl border border-gray-700">
                 <div className="text-center">
                   <p className="text-4xl mb-4">✅</p>
-                  <p className="text-white font-semibold text-lg">
-                    Message sent!
-                  </p>
+                  <p className="text-white font-semibold text-lg">Message sent!</p>
                   <p className="text-gray-400 mt-2 text-sm">
                     I&apos;ll get back to you soon.
                   </p>
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1.5">
-                    Name
-                  </label>
+                  <label className="block text-sm text-gray-400 mb-1.5">Name</label>
                   <input
                     type="text"
-                    required
                     value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-violet-600 transition-colors"
+                    onChange={set("name")}
+                    onBlur={blur("name")}
+                    className={`${inputClass}${errors.name ? " border-red-500" : ""}`}
                     placeholder="Your name"
                   />
+                  {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
                 </div>
+
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1.5">
-                    Email
-                  </label>
+                  <label className="block text-sm text-gray-400 mb-1.5">Email</label>
                   <input
                     type="email"
-                    required
                     value={form.email}
-                    onChange={(e) =>
-                      setForm({ ...form, email: e.target.value })
-                    }
-                    className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-violet-600 transition-colors"
+                    onChange={set("email")}
+                    onBlur={blur("email")}
+                    className={`${inputClass}${errors.email ? " border-red-500" : ""}`}
                     placeholder="your@email.com"
                   />
+                  {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
                 </div>
+
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1.5">
-                    Message
-                  </label>
+                  <label className="block text-sm text-gray-400 mb-1.5">Message</label>
                   <textarea
-                    required
-                    rows={5}
+                    rows={4}
                     value={form.message}
-                    onChange={(e) =>
-                      setForm({ ...form, message: e.target.value })
-                    }
-                    className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-violet-600 transition-colors resize-none"
+                    onChange={set("message")}
+                    onBlur={blur("message")}
+                    className={`${inputClass} resize-none${errors.message ? " border-red-500" : ""}`}
                     placeholder="Tell me about your project or opportunity..."
                   />
+                  {errors.message && <p className="text-red-400 text-xs mt-1">{errors.message}</p>}
                 </div>
+
+                {status === "error" && (
+                  <p className="text-red-400 text-sm">
+                    Something went wrong. Please try again or email me directly.
+                  </p>
+                )}
+
                 <button
                   type="submit"
-                  className="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-medium transition-all hover:shadow-lg hover:shadow-violet-500/25"
+                  disabled={status === "loading"}
+                  className="w-full py-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-all hover:shadow-lg hover:shadow-violet-500/25"
                 >
-                  Send Message
+                  {status === "loading" ? "Sending…" : "Send Message"}
                 </button>
               </form>
             )}
